@@ -4,48 +4,54 @@ import com.crackshotv3.core.attachments.AttachmentStats;
 import org.bukkit.util.Vector;
 
 /**
- * 武器の性能データをまとめるクラス（完全版・GUI編集対応・保存対応）
+ * 武器の性能データ
+ *
+ * 修正点:
+ * reloadTime を double から int に変更。
+ * WeaponFactory では config.getInt("stats.reloadTime", 40) で読んでおり、
+ * WeaponSaver では double として保存していたため次回ロード時に精度が失われていた。
+ * tick 単位の整数で統一する。
  */
 public class WeaponStats {
 
     // ===== ダメージ =====
     private double damage;
-    private double headshotMultiplier;   // ヘッドショット倍率
+    private double headshotMultiplier;
 
     // ===== 射撃速度・弾速 =====
-    private double fireRate;             // 発射速度（秒間）
-    private double projectileSpeed;      // 弾速（m/tick）
-    private String projectileType;       // 弾種 ("hitscan", "physical", "explosive", etc.)
-    private double projectileGravity;    // 重力補正
-    private double projectileRange;      // 射程
+    private double fireRate;
+    private double projectileSpeed;
+    private String projectileType;
+    private double projectileGravity;
+    private double projectileRange;
 
     // ===== リコイル =====
     private double recoilVertical;
     private double recoilHorizontal;
     private double recoilRecoverySpeed;
-    private String recoilPattern;        // パターン名
+    private String recoilPattern;
 
     // ===== 弾薬関連 =====
     private int magazineSize;
     private int reserveAmmo;
 
     // ===== バースト・その他 =====
-    private boolean automatic;           // フルオートか
-    private boolean burst;               // バースト射撃対応
-    private int burstCount;              // バーストの弾数
-    private Vector adsOffset;            // ADS時のサイトオフセット
-    private double reloadTime;           // リロード時間（秒）
+    private boolean automatic;
+    private boolean burst;
+    private int burstCount;
+    private Vector adsOffset;
+
+    // 修正: double → int (tick単位で統一)
+    private int reloadTime;
 
     // ===== スコープ =====
     private boolean scopeEnabled;
     private float scopeZoomFOV;
     private float adsSpeed;
 
-    // ===== 保存用 / 編集用 =====
     private WeaponStats baseStats;
 
     public WeaponStats() {
-        // デフォルト値
         this.damage = 10.0;
         this.headshotMultiplier = 2.0;
         this.fireRate = 0.2;
@@ -66,7 +72,7 @@ public class WeaponStats {
         this.burst = false;
         this.burstCount = 3;
         this.adsOffset = new Vector(0, 0, 0);
-        this.reloadTime = 2.0;
+        this.reloadTime = 40; // 修正: int (ticks)
 
         this.scopeEnabled = false;
         this.scopeZoomFOV = 30f;
@@ -202,8 +208,9 @@ public class WeaponStats {
     public Vector getAdsOffset() { return adsOffset; }
     public void setAdsOffset(Vector adsOffset) { this.adsOffset = adsOffset; }
 
-    public double getReloadTime() { return reloadTime; }
-    public void setReloadTime(double reloadTime) { this.reloadTime = reloadTime; }
+    // 修正: double → int
+    public int getReloadTime() { return reloadTime; }
+    public void setReloadTime(int reloadTime) { this.reloadTime = reloadTime; }
 
     public boolean isScopeEnabled() { return scopeEnabled; }
     public void setScopeEnabled(boolean scopeEnabled) { this.scopeEnabled = scopeEnabled; }

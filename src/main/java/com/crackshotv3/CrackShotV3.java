@@ -40,12 +40,11 @@ public final class CrackShotV3 extends JavaPlugin {
         LoggerUtil.info("=======================================");
         LoggerUtil.info("       CrackShotV3 Loading...");
         LoggerUtil.info("=======================================");
-
     }
 
     @Override
     public void onEnable() {
-        LoggerUtil.init(this, getConfig().getBoolean("debug", false)); // ← 先に呼ぶ
+        LoggerUtil.init(this, getConfig().getBoolean("debug", false));
         LoggerUtil.info("=======================================");
         LoggerUtil.info("       CrackShotV3 Enabling...");
         LoggerUtil.info("=======================================");
@@ -55,6 +54,8 @@ public final class CrackShotV3 extends JavaPlugin {
         bootstrap = new V3Bootstrap(this);
         bootstrap.initialize();
 
+        // ProjectileEngine は bootstrap.initialize() 内で init() 済みなので
+        // ここで getInstance() が使える
         createAPIInstances();
         registerCommands();
         registerListeners();
@@ -84,22 +85,19 @@ public final class CrackShotV3 extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerShootListener(weaponAPI, projectileAPI), this);
         Bukkit.getPluginManager().registerEvents(new PlayerHitListener(projectileAPI), this);
         Bukkit.getPluginManager().registerEvents(new PlayerSwapHandListener(weaponAPI), this);
-        Bukkit.getPluginManager().registerEvents(new PlayerInteractListener(weaponAPI), this);
+        // PlayerInteractListener は PlayerShootListener と処理が重複するため削除
         Bukkit.getPluginManager().registerEvents(new PlayerDropListener(weaponAPI), this);
         Bukkit.getPluginManager().registerEvents(new PlayerZoomListener(weaponAPI), this);
-
     }
 
     // ==== API ====
     private void createAPIInstances() {
         weaponAPI = new WeaponAPI(WeaponRegistry.get());
 
-        // ProjectileEngine は static なので get() は不要。static メソッドで管理する。
-        projectileAPI = new ProjectileAPI(null); // もし ProjectileAPI がインスタンスを必要とする場合は修正が必要
+        // 修正: null ではなく ProjectileEngine.getInstance() を渡す
+        projectileAPI = new ProjectileAPI(ProjectileEngine.getInstance());
 
-        // AttachmentRegistry は singleton
         attachmentAPI = new AttachmentAPI(AttachmentManager.get());
-
         animationAPI = new AnimationAPI(AnimationEngine.get());
         LoggerUtil.debug("API instances created.");
     }

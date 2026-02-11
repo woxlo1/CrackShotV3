@@ -11,7 +11,12 @@ import org.bukkit.entity.Player;
 import java.util.*;
 
 /**
- * 武器クラス（WeaponSaver 完全互換版）
+ * 武器クラス
+ *
+ * 修正点:
+ * shoot() 内で consumeAmmo(player) と addHeat() を直接呼んでいたが、
+ * AmmoModule と HeatModule がそれぞれ onShoot() で同じ処理を行うため二重消費になっていた。
+ * shoot() 内からの直接呼び出しを削除し、モジュールに一任する。
  */
 public class Weapon {
 
@@ -23,7 +28,6 @@ public class Weapon {
     private final List<Attachment> attachments;
     private WeaponState currentState;
 
-    // --- モジュールが要求する追加フィールド ---
     private int ammo = 30;
     private int maxAmmo = 30;
 
@@ -154,15 +158,12 @@ public class Weapon {
 
     private final Map<Player, Boolean> zoomingPlayers = new HashMap<>();
 
-    // WeaponSaver 互換用
     public boolean isScopeEnabled() { return hasScope(); }
     public float getScopeZoom() { return getScopeZoomFOV(); }
     public float getAdsSpeed() { return stats != null ? stats.getAdsSpeed() : 0.2f; }
     public List<String> getAttachmentIds() {
         List<String> ids = new ArrayList<>();
-        for (Attachment a : attachments) {
-            ids.add(a.getId());
-        }
+        for (Attachment a : attachments) ids.add(a.getId());
         return ids;
     }
 
@@ -181,6 +182,7 @@ public class Weapon {
     public void finishReload(Player player) {
         if (!isReloading()) return;
         currentState.setReloading(false);
+        reloadFull();
         ModuleManager.get().triggerReloadFinish(player, this);
         LoggerUtil.debug("[Weapon] Reload finished by " + player.getName() + " for " + id);
     }
@@ -189,7 +191,7 @@ public class Weapon {
     // Shooting
     // =====================================================
     public boolean canShoot(Player player) {
-        return !isReloading() && !currentState.isShooting();
+        return !isReloading() && !currentState.isShooting() && !jammed && !overheated;
     }
 
     public void shoot(Player player) {
@@ -200,12 +202,10 @@ public class Weapon {
 
         currentState.setShooting(true);
 
-        // モジュールイベント呼び出し
+        // モジュールイベント呼び出し（AmmoModule・HeatModule・JamModule がここで処理する）
+        // 修正: shoot() 内での consumeAmmo / addHeat の直接呼び出しを削除
+        //       各モジュールが onShoot() で処理するため二重消費になっていた
         ModuleManager.get().triggerShoot(player, this);
-
-        // 弾薬・熱量・ジャム処理
-        if (ammoSystem) consumeAmmo(player);
-        if (heatSystem) addHeat();
 
         currentState.setShooting(false);
         LoggerUtil.debug("[Weapon] Shot fired by " + player.getName() + " -> " + id);
@@ -224,31 +224,14 @@ public class Weapon {
         if (attachment == null || !attachments.remove(attachment)) return;
         attachment.removeFromWeapon(this);
     }
-// =====================================================
-// WeaponSaver / WeaponFactory 互換メソッド
-// =====================================================
-    /**
-     * attachment ID を追加
-     */
+
     public void addAttachmentId(String id) {
-        // 仮に AttachmentManager から取得する想定
         Attachment a = ModuleManager.get().getAttachmentById(id);
         if (a != null) addAttachment(a);
     }
 
-    /**
-     * スコープ有効設定
-     */
-    public void setScopeEnabled(boolean enabled) {
-        setScope(enabled);
-    }
-
-    /**
-     * スコープズーム設定
-     */
-    public void setScopeZoom(float fov) {
-        setScopeZoomFOV(fov);
-    }
+    public void setScopeEnabled(boolean enabled) { setScope(enabled); }
+    public void setScopeZoom(float fov) { setScopeZoomFOV(fov); }
 
     public boolean isZooming(Player player) {
         return zoomingPlayers.getOrDefault(player, false);
@@ -258,9 +241,6 @@ public class Weapon {
         zoomingPlayers.put(player, zooming);
     }
 
-    /**
-     * ADS速度設定
-     */
     public void setAdsSpeed(float speed) {
         if (stats != null) stats.setAdsSpeed(speed);
     }

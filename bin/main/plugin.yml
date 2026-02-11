@@ -1,0 +1,68 @@
+name: CrackShotV3
+main: com.crackshotv3.CrackShotV3
+version: 1.0.0
+api-version: 1.20
+author: woxloi
+website: https://github.com/woxlo1
+
+description: >
+  Next-generation FPS framework for Minecraft.
+  Weapon system / Attachments / Projectiles / Hit registry / NMS Abstraction / Editor / API.
+
+load: STARTUP
+
+commands:
+  csv3:
+    description: Root command for CrackShotV3.
+    aliases: [crackshotv3, cs3, crackv3]
+    usage: /csv3 <reload|give|editor|debug>
+    permission: crackshotv3.command
+    permission-message: "&cInsufficient permission."
+
+  weapon:
+    description: Weapon management command
+    usage: /weapon <args>
+
+  weaponreload:
+    description: Reload weapon
+    usage: /weaponreload <args>
+
+  attachment:
+    description: Manage attachments
+    usage: /attachment <args>
+
+  csv3debug:
+    description: Debug command
+    usage: /csv3debug <args>
+
+permissions:
+  crackshotv3.*:
+    description: "All CrackShotV3 permissions."
+    default: op
+    children:
+      crackshotv3.command: true
+      crackshotv3.admin: true
+      crackshotv3.user: true
+
+  crackshotv3.command:
+    description: "Access to main command /csv3."
+    default: op
+
+  crackshotv3.admin:
+    description: "Admin features such as reload, editor, give-all."
+    default: op
+
+  crackshotv3.user:
+    description: "Permission to use CrackShotV3 weapons."
+    default: true
+
+depend: []
+softdepend:
+  - PlaceholderAPI
+  - ProtocolLib
+  - Vault
+  - ItemsAdder
+  - Oraxen
+
+libraries:
+  - org.yaml:snakeyaml:2.2

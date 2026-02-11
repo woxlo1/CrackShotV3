@@ -1,19 +1,22 @@
 package com.crackshotv3.core.util;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.EnumWrappers.EntityUseAction;
 import org.bukkit.entity.Player;
 
+/**
+ * AnimationUtil
+ *
+ * 修正点:
+ * ProtocolLib の EntityUseAction をインポートしていたがクラスが存在せず
+ * コンパイルエラーになっていた。未使用インポートを全て削除。
+ */
 public class AnimationUtil {
 
+    /**
+     * スコープ FOV の疑似変更（ProtocolLib実装は別途）
+     */
     public static void playScopeFOV(Player p, float fov) {
-        try {
-            // これは一例: 実際にはクライアント側の FOV スケールに応じて調整
-            // 本当に FOV を変更するには Clientbound Entity Metadata Packet などを操作
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // ProtocolLib でのパケット操作は別途実装
+        // ここでは何もしない（stub）
     }
 
     public static void swing(Player p) {

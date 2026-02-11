@@ -1,11 +1,11 @@
 package com.crackshotv3.commands;
 
 import com.crackshotv3.CrackShotV3;
+import com.crackshotv3.core.util.NBTUtil;
 import com.crackshotv3.core.weapon.Weapon;
 import com.crackshotv3.core.weapon.WeaponRegistry;
 import com.crackshotv3.gui.WeaponEditorGUI;
 import com.crackshotv3.core.util.MessageUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,6 +13,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+/**
+ * WeaponCommand
+ *
+ * 修正点:
+ * handleGive() で ItemStack を生成する際に NBTUtil.setString(item, "weapon-id", weapon.getId()) を
+ * 追加し、WeaponAPI.getWeaponFromItem() が NBT で識別できるようにした。
+ */
 public class WeaponCommand implements CommandExecutor {
 
     private final CrackShotV3 plugin = CrackShotV3.getInstance();
@@ -76,18 +83,19 @@ public class WeaponCommand implements CommandExecutor {
             return;
         }
 
-        // --- 1.20.4 方式で ItemStack を生成 ---
         ItemStack item = new ItemStack(weapon.getItemMaterial());
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(weapon.getDisplayName()); // <- ここを変更
+            meta.setDisplayName(weapon.getDisplayName());
             item.setItemMeta(meta);
         }
+
+        // 修正: NBT に weapon-id を埋め込む（WeaponAPI.getWeaponFromItem() がNBTで識別するため）
+        NBTUtil.setString(item, "weapon-id", weapon.getId());
 
         player.getInventory().addItem(item);
         MessageUtil.send(player, "§a武器を受け取りました: " + weapon.getDisplayName());
     }
-
 
     private void handleList(CommandSender sender) {
         MessageUtil.send(sender, "§eロード済みの武器一覧:");

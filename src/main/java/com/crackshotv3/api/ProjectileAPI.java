@@ -13,6 +13,11 @@ import java.util.Map;
 /**
  * ProjectileAPI
  * 弾丸生成・発射・ヒット管理用API
+ *
+ * 修正点:
+ * - engine が null の場合にNPEが発生していた問題を修正
+ *   CrackShotV3.java から ProjectileEngine.getInstance() を渡すよう変更し、
+ *   ここではインスタンスメソッドを使う
  */
 public class ProjectileAPI {
 
@@ -31,10 +36,6 @@ public class ProjectileAPI {
 
     /**
      * 弾丸がプレイヤーにヒットした際の登録
-     *
-     * @param shooter 射手
-     * @param target 被弾者
-     * @param damage 与えたダメージ
      */
     public void registerHit(Player shooter, Player target, double damage) {
         if (shooter == null || target == null || damage <= 0) return;
@@ -69,12 +70,10 @@ public class ProjectileAPI {
     public ProjectileBase spawnProjectile(Player player, Weapon weapon) {
         if (player == null || weapon == null) return null;
 
-        // ProjectileEngine 側の factory メソッドに Player も渡す
+        // engine が null の場合は静的メソッドにフォールバック
         ProjectileBase projectile = ProjectileEngine.createProjectileFromWeapon(weapon, player);
-
         if (projectile == null) return null;
 
-        // 発射位置と方向を設定
         Location loc = player.getEyeLocation();
         Vector direction = loc.getDirection();
 
@@ -82,18 +81,26 @@ public class ProjectileAPI {
         projectile.setLocation(loc);
         projectile.setDirection(direction);
 
-        // エンジンに登録して発射
-        engine.addProjectile(projectile);
+        // 修正: engine が null でないときのみインスタンスメソッドを使う
+        if (engine != null) {
+            engine.addProjectileInstance(projectile);
+        } else {
+            ProjectileEngine.addProjectile(projectile);
+        }
 
         return projectile;
     }
 
     /**
-     * 弾丸の手動削除（Expire）
+     * 弾丸の手動削除
      */
     public void removeProjectile(ProjectileBase projectile) {
         if (projectile == null) return;
-        projectile.expire();
-        engine.removeProjectile(projectile);
+        if (engine != null) {
+            engine.removeProjectileInstance(projectile);
+        } else {
+            projectile.expire();
+            ProjectileEngine.removeProjectile(projectile);
+        }
     }
 }

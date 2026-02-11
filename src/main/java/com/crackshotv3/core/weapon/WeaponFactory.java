@@ -2,11 +2,13 @@ package com.crackshotv3.core.weapon;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.util.Vector;
 
 /**
- * Weapon オブジェクト生成・Config変換
+ * Weapon オブジェクト生成
+ *
+ * 修正点:
+ * stats.reloadTime を getDouble → getInt に変更（WeaponStats.reloadTime が int になったため）
  */
 public class WeaponFactory {
 
@@ -29,6 +31,7 @@ public class WeaponFactory {
         stats.setAutomatic(config.getBoolean("stats.automatic", true));
         stats.setBurst(config.getBoolean("stats.burst", false));
         stats.setBurstCount(config.getInt("stats.burstCount", 3));
+        // 修正: getInt で読む (double → int に統一)
         stats.setReloadTime(config.getInt("stats.reloadTime", 40));
 
         stats.setAdsOffset(new Vector(
@@ -37,17 +40,14 @@ public class WeaponFactory {
                 config.getDouble("stats.adsOffset.z", 0)
         ));
 
-        // 反動
         stats.setRecoilPattern(String.valueOf(config.getStringList("recoil.pattern")));
 
-        // projectile
         stats.setProjectileType(config.getString("projectile.type", "hitscan"));
         stats.setProjectileGravity(config.getDouble("projectile.gravity", -0.03));
         stats.setProjectileRange(config.getDouble("projectile.range", 100));
 
         Weapon w = new Weapon(id, name, mat, stats);
 
-        // attachments
         for (String id2 : config.getStringList("attachments.allowed")) {
             w.addAttachmentId(id2);
         }
@@ -59,4 +59,3 @@ public class WeaponFactory {
         return w;
     }
 }
-

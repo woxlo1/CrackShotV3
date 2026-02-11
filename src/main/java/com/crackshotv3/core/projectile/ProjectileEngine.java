@@ -12,10 +12,11 @@ import java.util.List;
 
 /**
  * 全弾丸の Tick 管理
- * <p>
- * ・Tick ごとに弾を更新
- * ・手動で追加・削除可能
- * ・自動で消滅済み弾を削除
+ *
+ * 修正点:
+ * 1. getInstance() を追加 (CrackShotV3.java から渡せるようにする)
+ * 2. tickAll() 内で onRemove() を二重呼び出ししていた問題を修正
+ *    - expire() の中で既に onRemove() が呼ばれるため、tickAll() では呼ばない
  */
 public class ProjectileEngine {
 
@@ -24,12 +25,16 @@ public class ProjectileEngine {
     private static CrackShotV3 plugin;
     private static BukkitRunnable tickTask;
 
+    // 修正: Singleton インスタンス
+    private static ProjectileEngine INSTANCE;
+
     // ==========================
     // 初期化 / シャットダウン
     // ==========================
     public static void init(CrackShotV3 pl) {
         if (initialized) return;
         plugin = pl;
+        INSTANCE = new ProjectileEngine();
 
         tickTask = new BukkitRunnable() {
             @Override
@@ -37,9 +42,16 @@ public class ProjectileEngine {
                 tickAll();
             }
         };
-        tickTask.runTaskTimer(plugin, 1L, 1L); // 1 tick ごと
+        tickTask.runTaskTimer(plugin, 1L, 1L);
         initialized = true;
         LoggerUtil.info("[ProjectileEngine] Initialized.");
+    }
+
+    /**
+     * 修正: CrackShotV3.java から ProjectileAPI へ渡せるよう getInstance() を追加
+     */
+    public static ProjectileEngine getInstance() {
+        return INSTANCE;
     }
 
     public static void shutdown() {
@@ -48,12 +60,14 @@ public class ProjectileEngine {
         if (tickTask != null) tickTask.cancel();
         activeProjectiles.clear();
         initialized = false;
+        INSTANCE = null;
         LoggerUtil.info("[ProjectileEngine] Shutdown complete.");
     }
 
     // ==========================
     // 弾丸管理 API
     // ==========================
+
     /**
      * Weapon から弾丸を生成
      */
@@ -62,7 +76,6 @@ public class ProjectileEngine {
 
         String projectileId = weapon.getId() + "_bullet";
 
-        // 匿名クラスでインスタンス化
         ProjectileBase projectile = new ProjectileBase(
                 projectileId,
                 shooter,
@@ -71,23 +84,37 @@ public class ProjectileEngine {
         ) {
             @Override
             public void onTick() {
-                super.onTick(); // デフォルトの挙動を呼ぶ
+                super.onTick();
             }
         };
 
         projectile.setWeapon(weapon);
-
         return projectile;
     }
+
     /**
-     * 弾を登録（addProjectile と同義）
+     * 弾を登録 (addProjectile と同義)
      */
     public static void addProjectile(ProjectileBase projectile) {
         registerProjectile(projectile);
     }
 
     /**
-     * 弾を削除（removeProjectile）
+     * インスタンスメソッド版 addProjectile (ProjectileAPI から呼ぶ)
+     */
+    public void addProjectileInstance(ProjectileBase projectile) {
+        registerProjectile(projectile);
+    }
+
+    /**
+     * インスタンスメソッド版 removeProjectile (ProjectileAPI から呼ぶ)
+     */
+    public void removeProjectileInstance(ProjectileBase projectile) {
+        removeProjectile(projectile);
+    }
+
+    /**
+     * 弾を削除
      */
     public static void removeProjectile(ProjectileBase projectile) {
         if (projectile == null) return;
@@ -116,7 +143,6 @@ public class ProjectileEngine {
         return new ArrayList<>(activeProjectiles);
     }
 
-
     // ==========================
     // 弾丸 Tick 処理
     // ==========================
@@ -130,15 +156,15 @@ public class ProjectileEngine {
                 proj.onTick();
 
                 if (proj.isExpired()) {
-                    proj.onRemove();      // 弾消滅時のフック
-                    iterator.remove();    // リストから削除
+                    // 修正: expire() 内で既に onRemove() が呼ばれているため、ここでは呼ばない
+                    // 旧コード: proj.onRemove(); ← 二重呼び出しだった
+                    iterator.remove();
                     LoggerUtil.debug("[ProjectileEngine] Projectile removed: " + proj.getId());
                 }
             } catch (Exception e) {
                 LoggerUtil.error("[ProjectileEngine] Error ticking projectile: " + proj.getId(), e);
-                iterator.remove(); // エラー発生時も削除
+                iterator.remove();
             }
         }
     }
-
 }

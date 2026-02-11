@@ -11,6 +11,9 @@ import com.crackshotv3.core.util.LoggerUtil;
 
 /**
  * CrackShotV3 の初期化ブートストラップクラス。
+ *
+ * 修正: initModules() を loadWeaponData() / loadAttachmentData() の後に呼ぶよう変更。
+ *       ModuleManager はWeaponRegistry に武器が登録された後でないとモジュールを割り当てられない。
  */
 public class V3Bootstrap {
 
@@ -28,9 +31,10 @@ public class V3Bootstrap {
     public void initialize() {
         LoggerUtil.info("========== CrackShotV3 Initializing ==========");
 
-        initModules();
+        // 武器・アタッチメントを先にロードしてからモジュールを初期化する
         loadWeaponData();
         loadAttachmentData();
+        initModules();          // ← 武器ロード後に移動（修正点）
         initProjectileEngine();
         initAnimationEngine();
 
@@ -76,6 +80,7 @@ public class V3Bootstrap {
         WeaponLoader.loadAll(plugin);
         AttachmentLoader.loadAll(plugin);
 
+        // 武器再ロード後にモジュールも再初期化
         ModuleManager.get().reload(plugin);
 
         LoggerUtil.info("[Bootstrap] Reload completed.");

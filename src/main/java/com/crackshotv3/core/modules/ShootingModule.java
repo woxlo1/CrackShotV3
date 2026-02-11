@@ -1,21 +1,22 @@
 package com.crackshotv3.core.modules;
 
 import com.crackshotv3.CrackShotV3;
-import com.crackshotv3.core.projectile.PhysicalProjectile;
-import com.crackshotv3.core.projectile.ProjectileBase;
-import com.crackshotv3.core.projectile.ProjectileEngine;
 import com.crackshotv3.core.weapon.Weapon;
 import com.crackshotv3.core.util.LoggerUtil;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
-
-import java.util.UUID;
 
 import static com.crackshotv3.core.util.MessageUtil.send;
 
 /**
- * 単発射撃処理。
+ * ShootingModule
+ *
+ * 修正点:
+ * 以前は onShoot() 内で ProjectileEngine に直接弾丸を登録していたが、
+ * 実際の弾丸生成は PlayerShootListener → ProjectileAPI.spawnProjectile() で行われる。
+ * weapon.shoot() は Weapon クラスから呼ばれ、ModuleManager.triggerShoot() → このクラスの onShoot() が呼ばれる。
+ * ここで再度弾丸を生成すると二重発射になるため、弾丸生成コードを削除。
+ *
+ * このモジュールは射撃時の副次処理（ジャム確認・オーバーヒート確認・ログ出力）のみ担当する。
  */
 public class ShootingModule extends Module {
 
@@ -32,37 +33,21 @@ public class ShootingModule extends Module {
     public void onShoot(Player player, Weapon weapon) {
         if (player == null || weapon == null) return;
 
-        // 武器がジャム・オーバーヒートしている場合は発射不可
-        try {
-            if (weapon.isJammed() || weapon.isOverheated()) {
-                send(player, "§c発射できません");
-                return;
-            }
-        } catch (Throwable ignored) {
-            // Weapon にそのメソッドが無い場合はスルー（互換性確保）
+        // ジャム・オーバーヒートチェック（既に Weapon.canShoot() でも確認しているが念のため）
+        if (weapon.isJammed()) {
+            send(player, "§c武器がジャムしています！");
+            debug(player.getName() + " tried to fire jammed weapon: " + weapon.getId());
+            return;
         }
 
-        try {
-            // プレイヤーの目線位置と向き
-            Location eye = player.getEyeLocation();
-            Vector position = eye.toVector();
-            Vector direction = eye.getDirection().normalize();
-
-            // 一意な ID を付与（weaponId-UUID）
-            String projId = weapon.getId() + "-" + UUID.randomUUID().toString();
-
-            // TODO: 将来的には weapon.getStats() を参照して
-            // HitScan / Beam / Explosive などに切り替えられるようにする
-            ProjectileBase projectile = new PhysicalProjectile(projId, player, position, direction);
-
-            // 登録してエンジンで管理させる
-            ProjectileEngine.registerProjectile(projectile);
-
-            debug(player.getName() + " fired " + weapon.getId() + " -> projectile=" + projId);
-
-        } catch (Exception e) {
-            LoggerUtil.error("[ShootingModule] Failed to spawn projectile for player: " + player.getName(), e);
-            send(player, "§c発射に失敗しました (内部エラー)");
+        if (weapon.isOverheated()) {
+            send(player, "§c武器がオーバーヒートしています！");
+            debug(player.getName() + " tried to fire overheated weapon: " + weapon.getId());
+            return;
         }
+
+        // 弾丸生成は PlayerShootListener → ProjectileAPI に任せる
+        // ここでは発射ログのみ記録
+        debug(player.getName() + " fired " + weapon.getId());
     }
 }
